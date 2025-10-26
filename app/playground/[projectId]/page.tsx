@@ -19,14 +19,52 @@ export type Messages = {
   content: string;
 };
 
+const Prompt = `
+userInput: {userInput}
+Based on the user input, generate a complete HTML Tailwind CSS code using
+Flowbite UI components. Use a modern design with blue as the primary color
+theme. Do not add HTML head or title tag, just body make it fully responsive.
+Requirements:
+- All primary components must match the theme color.
+- Add proper padding and margin for each element.
+- Components should not be connected to one another;
+each element should be independent.
+- Design must be fully responsive for all screen sizes.
+- Use placeholders for all images for light mode:
+https://community.softr.io/uploads/db9110/original/2X/7/74e6e7e382d0ff5d7773ca9a87e6f6f8817a68a6.jpeg 
+and for dark mode use:
+https://www.cibaky.com/wp-content/uploads/2015/12/placeholder-3.jpg
+For image , add alt tag with image prompt for that image
+- Do not include broken links.
+- Libraray already install so do not installed or add in script
+- Header menu options should be spread out and not connected.
+
+use the following component where appropriate:
+- fa fa icons
+- **Flowbite** for UI components like buttons, modals, forms, tables, 
+tabs, and alerts, cards, dialog, dropdown, etc
+- Chart.js for charts & graphs
+- Swiper.js for sliders/carousels
+- tooltip & Popover library (Tippy.js)
+
+Additional requirements:
+- Ensure proper spacing, alignment, and hierarchy for all elements.
+- Include interactive components like modals, dropdowns , and accordions
+where suitable.
+- Ensure charts are visually appealing and match the theme color.
+- Do not add any extra text before or after the HTML code.
+- Output a complete, ready-to-use HTML page.
+Do not give any raw text before start and end pont the ai response.
+`;
+
 function PlayGround() {
   const { projectId } = useParams();
   const params = useSearchParams();
   const frameId = params.get("frameId");
   const [frameDetail, setFrameDetail] = useState<Frame>();
   const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState<Messages[]>();
-  const [generatedCode, setGeneratedCode] = useState<any>();
+  const [messages, setMessages] = useState<Messages[]>([]);
+  const [generatedCode, setGeneratedCode] = useState<any>("");
 
   useEffect(() => {
     frameId && GetFrameDetails();
@@ -38,6 +76,10 @@ function PlayGround() {
     );
     console.log(result.data);
     setFrameDetail(result.data);
+    if (result.data?.chatMessages?.length == 1) {
+      const userMsg = result.data?.chatMessages[0].content;
+      SendMessage(userMsg);
+    }
   };
 
   const SendMessage = async (userInput: string) => {
@@ -49,7 +91,9 @@ function PlayGround() {
     const result = await fetch("/api/ai-model", {
       method: "POST",
       body: JSON.stringify({
-        messages: [{ role: "user", content: userInput }],
+        messages: [
+          { role: "user", content: Prompt?.replace("{userInput}", userInput) },
+        ],
       }),
     });
 
@@ -87,11 +131,16 @@ function PlayGround() {
     } else {
       setMessages((prev: any) => [
         ...prev,
-        { role: "assistant", content: "Your code is ready" },
+        { role: "assistant", content: "Your code is ready!" },
       ]);
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    console.log(generatedCode);
+    //console.log("Code end");
+  }, [generatedCode]);
 
   return (
     <div>
@@ -102,6 +151,7 @@ function PlayGround() {
         <ChatSection
           messages={messages ?? []}
           onSend={(input: string) => SendMessage(input)}
+          loading={loading}
         />
 
         {/* WebDesign */}
